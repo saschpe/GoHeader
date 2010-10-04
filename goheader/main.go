@@ -61,7 +61,7 @@ func turn(fname string) os.Error {
 	r := bufio.NewReader(file)
 
 	fmt.Println(header)
-	var isMultipleComment bool
+	var isMultipleComment, isDefine bool
 
 	for {
 		line, err := r.ReadString('\n')
@@ -115,6 +115,10 @@ func turn(fname string) os.Error {
 
 		// === Turn defines.
 		if fields := reDefine.FindStringSubmatch(line); fields != nil {
+			if !isDefine {
+				isDefine = true
+				fmt.Print("const (\n")
+			}
 			line = fmt.Sprintf("%s = %s", fields[2], fields[3])
 
 			// Removes comment (if any) to ckeck if it is a macro.
@@ -124,6 +128,12 @@ func turn(fname string) os.Error {
 			}
 
 			fmt.Print(line)
+			continue
+		}
+
+		if isDefine && line == "\n" {
+			fmt.Print(")\n\n")
+			isDefine = false
 			continue
 		}
 
