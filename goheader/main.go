@@ -21,9 +21,9 @@ import (
 )
 
 
-const C_LINE_COMMENT = "//!!! "
+const COMMENT_C_LINE = "//!!! "
 
-var header = `// {cmd}
+var goHeader = `// {cmd}
 // MACHINE GENERATED.
 
 package {pkg}
@@ -42,9 +42,12 @@ func usage() {
 }
 
 
-func turn(fname string) os.Error {
+// Translates C type declaration into Go type declaration.
+func translateC(fname string) os.Error {
 	// === Regular expressions
 	reSkip := regexp.MustCompile(`^(\n|//)`) // Empty lines and comments.
+
+	reType := regexp.MustCompile(`^(typedef)[ \t]+(.+)[ \t]+(.+)[;](.+)?`)
 
 	reStruct := regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
 	reStructField := regexp.MustCompile(`^[ \t]*(.+)[ \t]+(.+)[;](.+)?`)
@@ -59,6 +62,8 @@ func turn(fname string) os.Error {
 	reEndMultipleComment := regexp.MustCompile(`^(.+)?\*/`)
 
 	// === File to read
+	var isMultipleComment, isDefine, isStruct bool
+
 	file, err := os.Open(fname, os.O_RDONLY, 0)
 	if err != nil {
 		return err
@@ -67,8 +72,7 @@ func turn(fname string) os.Error {
 
 	r := bufio.NewReader(file)
 
-	fmt.Println(header)
-	var isMultipleComment, isDefine, isStruct bool
+	fmt.Println(goHeader)
 
 	for {
 		line, err := r.ReadString('\n')
@@ -89,7 +93,6 @@ func turn(fname string) os.Error {
 				}
 			}
 		}
-
 		if !isSingleComment && !isMultipleComment && strings.HasPrefix(line, "/*") {
 			isMultipleComment = true
 		}
@@ -103,7 +106,6 @@ func turn(fname string) os.Error {
 				}
 				continue
 			}
-
 			if fields := reEndMultipleComment.FindStringSubmatch(line); fields != nil {
 				if fields[1] != "" {
 					line = "// " + fields[1] + "\n"
@@ -112,7 +114,6 @@ func turn(fname string) os.Error {
 				isMultipleComment = false
 				continue
 			}
-
 			if fields := reMiddleMultipleComment.FindStringSubmatch(line); fields != nil {
 				line = "// " + fields[1]
 				fmt.Print(line)
@@ -120,7 +121,25 @@ func turn(fname string) os.Error {
 			}
 		}
 
-		// === Turn defines.
+		// === Convert type definitions.
+		if fields := reType.FindStringSubmatch(line); fields != nil {
+			gotype, ok := ctypeTogo(fields[2])
+			line = fmt.Sprintf("type %s %s", fields[3], gotype)
+
+			if fields[4] != "\n" {
+				line += fields[4]
+			} else {
+				line += "\n"
+			}
+			if !ok {
+				line = COMMENT_C_LINE + line
+			}
+
+			fmt.Print(line)
+			continue
+		}
+
+		// === Convert defines.
 		if fields := reDefine.FindStringSubmatch(line); fields != nil {
 			if !isDefine {
 				isDefine = true
@@ -131,20 +150,19 @@ func turn(fname string) os.Error {
 			// Removes comment (if any) to ckeck if it is a macro.
 			lastField := strings.Split(fields[3], "//", -1)[0]
 			if reDefineMacro.MatchString(lastField) {
-				line = C_LINE_COMMENT + line
+				line = COMMENT_C_LINE + line
 			}
 
 			fmt.Print(line)
 			continue
 		}
-
 		if isDefine && line == "\n" {
 			fmt.Print(")\n\n")
 			isDefine = false
 			continue
 		}
 
-		// === Turn structs.
+		// === Convert structs.
 		if !isStruct {
 			if fields := reStruct.FindStringSubmatch(line); fields != nil {
 				isStruct = true
@@ -178,13 +196,12 @@ func turn(fname string) os.Error {
 
 				// C type not found.
 				if !ok {
-					line = C_LINE_COMMENT + line
+					line = COMMENT_C_LINE + line
 				}
 
 				fmt.Print(line)
 				continue
 			}
-
 			if strings.HasPrefix(line, "}") {
 				fmt.Print(strings.Replace(line, ";", "", 1))
 				isStruct = false
@@ -195,7 +212,7 @@ func turn(fname string) os.Error {
 		// Comment another C lines.
 		//if line != "\n" && !strings.HasPrefix(line, "//") {
 		if !reSkip.MatchString(line) {
-			line = C_LINE_COMMENT + line
+			line = COMMENT_C_LINE + line
 		}
 
 		fmt.Print(line)
@@ -241,7 +258,6 @@ func main() {
 		fmt.Println(validOS)
 		os.Exit(0)
 	}
-
 	if len(os.Args) == 1 || *fOS == "" || *fPackage == "" {
 		usage()
 	}
@@ -254,7 +270,6 @@ func main() {
 			break
 		}
 	}
-
 	if !isValidOS {
 		fmt.Fprintf(os.Stderr, "ERROR: System passed in flag 's' is invalid\n")
 		os.Exit(1)
@@ -262,12 +277,12 @@ func main() {
 
 	// === Update header
 	cmd := strings.Join(os.Args, " ")
-	header = strings.Replace(header, "{cmd}", path.Base(cmd), 1)
-	header = strings.Replace(header, "{pkg}", *fPackage, 1)
+	goHeader = strings.Replace(goHeader, "{cmd}", path.Base(cmd), 1)
+	goHeader = strings.Replace(goHeader, "{pkg}", *fPackage, 1)
 
 File := "../test/header.h"
 
-	if err := turn(File); err != nil {
+	if err := translateC(File); err != nil {
 		fmt.Fprintf(os.Stderr, err.String())
 		os.Exit(1)
 	}
