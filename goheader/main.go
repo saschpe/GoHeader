@@ -44,8 +44,13 @@ func usage() {
 
 func turn(fname string) os.Error {
 	reSkipLine := regexp.MustCompile(`^#(ifdef|ifndef|else|undef|endif|include|define)[ \t\n]`)
-	reDefine := regexp.MustCompile(`^(#[ \t]*define)[ \t]+([^ \t]+)[ \t]+(.+)`)
-	reMacroInDefine := regexp.MustCompile(`^.*(\(.*\))`)
+
+	reStruct := regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
+	reStructField := regexp.MustCompile(`^[ \t]*(.+)[ \t]+(.+)[;](.+)?`)
+	reStructField1 := regexp.MustCompile(`^[^_]*[_]?(.+)`)
+
+	reDefine := regexp.MustCompile(`^[ \t]*#[ \t]*(define|DEFINE)[ \t]+([^ \t]+)[ \t]+(.+)`)
+	reDefineMacro := regexp.MustCompile(`^.*(\(.*\))`)
 
 	reSingleComment := regexp.MustCompile(`^(.+)?/\*[ \t]*(.+)[ \t]*\*/`)
 	reStartMultipleComment := regexp.MustCompile(`^/\*(.+)?`)
@@ -61,7 +66,7 @@ func turn(fname string) os.Error {
 	r := bufio.NewReader(file)
 
 	fmt.Println(header)
-	var isMultipleComment, isDefine bool
+	var isMultipleComment, isDefine, isStruct bool
 
 	for {
 		line, err := r.ReadString('\n')
@@ -123,7 +128,7 @@ func turn(fname string) os.Error {
 
 			// Removes comment (if any) to ckeck if it is a macro.
 			lastField := strings.Split(fields[3], "//", -1)[0]
-			if reMacroInDefine.MatchString(lastField) {
+			if reDefineMacro.MatchString(lastField) {
 				line = C_LINE_COMMENT + line
 			}
 
@@ -137,6 +142,53 @@ func turn(fname string) os.Error {
 			continue
 		}
 
+		// === Turn structs.
+		if !isStruct {
+			if fields := reStruct.FindStringSubmatch(line); fields != nil {
+				isStruct = true
+
+				if isDefine {
+					fmt.Print(")\n")
+					isDefine = false
+				}
+
+				fmt.Printf("type %s struct {\n", strings.Title(fields[2]))
+				continue
+			}
+		} else {
+			if fields := reStructField.FindStringSubmatch(line); fields != nil {
+				// Convert the field type.
+				gotype, ok := ctypeTogo(fields[1])
+
+				// Convert the field name.
+				fieldName := reStructField1.FindStringSubmatch(fields[2])
+				_fieldName := ""
+
+				if fieldName[1] != "" {
+					_fieldName = fieldName[1]
+				} else {
+					_fieldName = fieldName[0]
+				}
+
+				line = fmt.Sprintf("%s %s %s",
+					strings.Title(_fieldName), gotype, fields[3])
+
+				// C type not found.
+				if !ok {
+					line = C_LINE_COMMENT + line
+				}
+
+				fmt.Print(line)
+				continue
+			}
+
+			if strings.HasPrefix(line, "}") {
+				fmt.Print(strings.Replace(line, ";", "", 1))
+				isStruct = false
+				continue
+			}
+		}
+
 		// === Comment another lines.
 		if reSkipLine.MatchString(line) {
 			line = C_LINE_COMMENT + line
@@ -148,6 +200,29 @@ func turn(fname string) os.Error {
 	}
 
 	return nil
+}
+
+// Turns a type's string from C to Go.
+func ctypeTogo(ctype string) (gotype string, ok bool) {
+	switch ctype {
+	case "char", "signed char", "signed short int", "short int", "short":
+		return "int8", true
+	case "unsigned char", "unsigned short int", "unsigned short":
+		return "uint8", true
+	case "int", "signed int":
+		return "int16", true
+	case "unsigned int", "unsigned":
+		return "uint16", true
+	case "signed long int", "long int", "long":
+		return "int32", true
+	case "unsigned long int", "unsigned long":
+		return "uint32", true
+	case "float":
+		return "float32", true
+	case "double", "long double":
+		return "float64", true
+	}
+	return ctype, false
 }
 
 
@@ -189,7 +264,7 @@ func main() {
 	header = strings.Replace(header, "{pkg}", *fPackage, 1)
 
 //File := "/usr/include/asm-generic/ioctls.h"
-File := "/usr/include/asm-generic/termbits.h"
+File := "/usr/include/asm-generic/termios.h"
 
 	if err := turn(File); err != nil {
 		fmt.Fprintf(os.Stderr, err.String())
