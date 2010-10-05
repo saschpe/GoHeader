@@ -43,11 +43,12 @@ func usage() {
 
 
 func turn(fname string) os.Error {
-	reSkip := regexp.MustCompile(`^(\n|//)`) // Comments and empty lines.
+	// === Regular expressions
+	reSkip := regexp.MustCompile(`^(\n|//)`) // Empty lines and comments.
 
 	reStruct := regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
 	reStructField := regexp.MustCompile(`^[ \t]*(.+)[ \t]+(.+)[;](.+)?`)
-	reStructField1 := regexp.MustCompile(`^[^_]*[_]?(.+)`)
+	reStructFieldName := regexp.MustCompile(`^([^_]*_)?(.+)`)
 
 	reDefine := regexp.MustCompile(`^[ \t]*#[ \t]*(define|DEFINE)[ \t]+([^ \t]+)[ \t]+(.+)`)
 	reDefineMacro := regexp.MustCompile(`^.*(\(.*\))`)
@@ -57,6 +58,7 @@ func turn(fname string) os.Error {
 	reMiddleMultipleComment := regexp.MustCompile(`^[ \t*]*(.+)`)
 	reEndMultipleComment := regexp.MustCompile(`^(.+)?\*/`)
 
+	// === File to read
 	file, err := os.Open(fname, os.O_RDONLY, 0)
 	if err != nil {
 		return err
@@ -161,11 +163,11 @@ func turn(fname string) os.Error {
 				gotype, ok := ctypeTogo(fields[1])
 
 				// === Convert the field name.
-				fieldName := reStructField1.FindStringSubmatch(fields[2])
+				fieldName := reStructFieldName.FindStringSubmatch(fields[2])
 				_fieldName := ""
 
 				if fieldName[1] != "" {
-					_fieldName = fieldName[1]
+					_fieldName = fieldName[2]
 				} else {
 					_fieldName = fieldName[0]
 				}
@@ -263,8 +265,7 @@ func main() {
 	header = strings.Replace(header, "{cmd}", path.Base(cmd), 1)
 	header = strings.Replace(header, "{pkg}", *fPackage, 1)
 
-File := "/usr/include/asm-generic/ioctls.h"
-//File := "/usr/include/asm-generic/termios.h"
+File := "../test/header.h"
 
 	if err := turn(File); err != nil {
 		fmt.Fprintf(os.Stderr, err.String())
