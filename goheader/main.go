@@ -30,12 +30,6 @@ var goHeader = `// {cmd}
 package {pkg}
 `
 
-// Flags
-var (
-	fOS      = flag.String("s", "", "The operating system")
-	fPackage = flag.String("p", "", "The name of the package")
-	fListOS  = flag.Bool("ls", false, "List of valid systems")
-)
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: goheader -s system -g package [defs.h...]\n")
@@ -259,31 +253,37 @@ func ctypeTogo(ctype string, extraCtype *vector.StringVector) (gotype string, ok
 
 
 func main() {
-	var isValidOS bool
-	validOS := []string{"darwin", "freebsd", "linux", "windows"}
+	var (
+		system      = flag.String("s", "", "The operating system")
+		pkgName     = flag.String("p", "", "The name of the package")
+		listSystems = flag.Bool("l", false, "List of valid systems")
+	)
+
+	validSystems := []string{"darwin", "freebsd", "linux", "windows"}
+	var isSystem bool
 
 	// === Parse the flags
 	flag.Usage = usage
 	flag.Parse()
 
-	if *fListOS {
+	if *listSystems {
 		fmt.Print("  = Systems\n\n  ")
-		fmt.Println(validOS)
+		fmt.Println(validSystems)
 		os.Exit(0)
 	}
-	if len(os.Args) == 1 || *fOS == "" || *fPackage == "" {
+	if len(os.Args) == 1 || *system == "" || *pkgName == "" {
 		usage()
 	}
 
-	*fOS = strings.ToLower(*fOS)
+	*system = strings.ToLower(*system)
 
-	for _, v := range validOS {
-		if v == *fOS {
-			isValidOS = true
+	for _, v := range validSystems {
+		if v == *system {
+			isSystem = true
 			break
 		}
 	}
-	if !isValidOS {
+	if !isSystem {
 		fmt.Fprintf(os.Stderr, "ERROR: System passed in flag 's' is invalid\n")
 		os.Exit(1)
 	}
@@ -291,10 +291,9 @@ func main() {
 	// === Update header
 	cmd := strings.Join(os.Args, " ")
 	goHeader = strings.Replace(goHeader, "{cmd}", path.Base(cmd), 1)
-	goHeader = strings.Replace(goHeader, "{pkg}", *fPackage, 1)
+	goHeader = strings.Replace(goHeader, "{pkg}", *pkgName, 1)
 
-File := "../test/header.h"
-
+	File := "../test/header.h" // !!!
 	if err := translateC(File); err != nil {
 		fmt.Fprintf(os.Stderr, err.String())
 		os.Exit(1)
