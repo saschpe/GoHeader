@@ -43,7 +43,7 @@ func usage() {
 
 
 func turn(fname string) os.Error {
-	reSkipLine := regexp.MustCompile(`^#(ifdef|ifndef|else|undef|endif|include|define)[ \t\n]`)
+	reSkip := regexp.MustCompile(`^(\n|//)`) // Comments and empty lines.
 
 	reStruct := regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
 	reStructField := regexp.MustCompile(`^[ \t]*(.+)[ \t]+(.+)[;](.+)?`)
@@ -160,7 +160,7 @@ func turn(fname string) os.Error {
 				// Convert the field type.
 				gotype, ok := ctypeTogo(fields[1])
 
-				// Convert the field name.
+				// === Convert the field name.
 				fieldName := reStructField1.FindStringSubmatch(fields[2])
 				_fieldName := ""
 
@@ -169,6 +169,7 @@ func turn(fname string) os.Error {
 				} else {
 					_fieldName = fieldName[0]
 				}
+				// ===
 
 				line = fmt.Sprintf("%s %s %s",
 					strings.Title(_fieldName), gotype, fields[3])
@@ -189,11 +190,10 @@ func turn(fname string) os.Error {
 			}
 		}
 
-		// === Comment another lines.
-		if reSkipLine.MatchString(line) {
+		// Comment another C lines.
+		//if line != "\n" && !strings.HasPrefix(line, "//") {
+		if !reSkip.MatchString(line) {
 			line = C_LINE_COMMENT + line
-			fmt.Print(line)
-			continue
 		}
 
 		fmt.Print(line)
@@ -263,8 +263,8 @@ func main() {
 	header = strings.Replace(header, "{cmd}", path.Base(cmd), 1)
 	header = strings.Replace(header, "{pkg}", *fPackage, 1)
 
-//File := "/usr/include/asm-generic/ioctls.h"
-File := "/usr/include/asm-generic/termios.h"
+File := "/usr/include/asm-generic/ioctls.h"
+//File := "/usr/include/asm-generic/termios.h"
 
 	if err := turn(File); err != nil {
 		fmt.Fprintf(os.Stderr, err.String())
