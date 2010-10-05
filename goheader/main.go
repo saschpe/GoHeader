@@ -82,14 +82,14 @@ func translateC(fname string) os.Error {
 		line = strings.TrimSpace(line) + "\n"
 		isSingleComment := false
 
-		// === Convert comment of single line.
+		// === Translate comment of single line.
 		if !isMultipleComment {
-			if fields := reSingleComment.FindStringSubmatch(line); fields != nil {
+			if sub := reSingleComment.FindStringSubmatch(line); sub != nil {
 				isSingleComment = true
-				line = "// " + fields[2] + "\n"
+				line = "// " + sub[2] + "\n"
 
-				if fields[1] != "" {
-					line = fields[1] + line
+				if sub[1] != "" {
+					line = sub[1] + line
 				}
 			}
 		}
@@ -97,37 +97,37 @@ func translateC(fname string) os.Error {
 			isMultipleComment = true
 		}
 
-		// === Convert comments of multiple line.
+		// === Translate comments of multiple line.
 		if isMultipleComment {
-			if fields := reStartMultipleComment.FindStringSubmatch(line); fields != nil {
-				if fields[1] != "\n" {
-					line = "// " + fields[1]
+			if sub := reStartMultipleComment.FindStringSubmatch(line); sub != nil {
+				if sub[1] != "\n" {
+					line = "// " + sub[1]
 					fmt.Print(line)
 				}
 				continue
 			}
-			if fields := reEndMultipleComment.FindStringSubmatch(line); fields != nil {
-				if fields[1] != "" {
-					line = "// " + fields[1] + "\n"
+			if sub := reEndMultipleComment.FindStringSubmatch(line); sub != nil {
+				if sub[1] != "" {
+					line = "// " + sub[1] + "\n"
 					fmt.Print(line)
 				}
 				isMultipleComment = false
 				continue
 			}
-			if fields := reMiddleMultipleComment.FindStringSubmatch(line); fields != nil {
-				line = "// " + fields[1]
+			if sub := reMiddleMultipleComment.FindStringSubmatch(line); sub != nil {
+				line = "// " + sub[1]
 				fmt.Print(line)
 				continue
 			}
 		}
 
-		// === Convert type definitions.
-		if fields := reType.FindStringSubmatch(line); fields != nil {
-			gotype, ok := ctypeTogo(fields[2])
-			line = fmt.Sprintf("type %s %s", fields[3], gotype)
+		// === Translate type definitions.
+		if sub := reType.FindStringSubmatch(line); sub != nil {
+			gotype, ok := ctypeTogo(sub[2])
+			line = fmt.Sprintf("type %s %s", sub[3], gotype)
 
-			if fields[4] != "\n" {
-				line += fields[4]
+			if sub[4] != "\n" {
+				line += sub[4]
 			} else {
 				line += "\n"
 			}
@@ -139,16 +139,16 @@ func translateC(fname string) os.Error {
 			continue
 		}
 
-		// === Convert defines.
-		if fields := reDefine.FindStringSubmatch(line); fields != nil {
+		// === Translate defines.
+		if sub := reDefine.FindStringSubmatch(line); sub != nil {
 			if !isDefine {
 				isDefine = true
 				fmt.Print("const (\n")
 			}
-			line = fmt.Sprintf("%s = %s", fields[2], fields[3])
+			line = fmt.Sprintf("%s = %s", sub[2], sub[3])
 
 			// Removes comment (if any) to ckeck if it is a macro.
-			lastField := strings.Split(fields[3], "//", -1)[0]
+			lastField := strings.Split(sub[3], "//", -1)[0]
 			if reDefineMacro.MatchString(lastField) {
 				line = COMMENT_C_LINE + line
 			}
@@ -162,9 +162,9 @@ func translateC(fname string) os.Error {
 			continue
 		}
 
-		// === Convert structs.
+		// === Translate structs.
 		if !isStruct {
-			if fields := reStruct.FindStringSubmatch(line); fields != nil {
+			if sub := reStruct.FindStringSubmatch(line); sub != nil {
 				isStruct = true
 
 				if isDefine {
@@ -172,16 +172,16 @@ func translateC(fname string) os.Error {
 					isDefine = false
 				}
 
-				fmt.Printf("type %s struct {\n", strings.Title(fields[2]))
+				fmt.Printf("type %s struct {\n", strings.Title(sub[2]))
 				continue
 			}
 		} else {
-			if fields := reStructField.FindStringSubmatch(line); fields != nil {
-				// Convert the field type.
-				gotype, ok := ctypeTogo(fields[1])
+			if sub := reStructField.FindStringSubmatch(line); sub != nil {
+				// Translate the field type.
+				gotype, ok := ctypeTogo(sub[1])
 
-				// === Convert the field name.
-				fieldName := reStructFieldName.FindStringSubmatch(fields[2])
+				// === Translate the field name.
+				fieldName := reStructFieldName.FindStringSubmatch(sub[2])
 				_fieldName := ""
 
 				if fieldName[1] != "" {
@@ -192,7 +192,7 @@ func translateC(fname string) os.Error {
 				// ===
 
 				line = fmt.Sprintf("%s %s %s",
-					strings.Title(_fieldName), gotype, fields[3])
+					strings.Title(_fieldName), gotype, sub[3])
 
 				// C type not found.
 				if !ok {
