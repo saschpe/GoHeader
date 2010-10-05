@@ -12,6 +12,7 @@ package main
 import (
 	"bufio"
 	//"bytes"
+	"container/vector"
 	"flag"
 	"fmt"
 	"os"
@@ -29,6 +30,7 @@ var goHeader = `// {cmd}
 package {pkg}
 `
 
+// Flags
 var (
 	fOS      = flag.String("s", "", "The operating system")
 	fPackage = flag.String("p", "", "The name of the package")
@@ -63,6 +65,7 @@ func translateC(fname string) os.Error {
 
 	// === File to read
 	var isMultipleComment, isDefine, isStruct bool
+	var extraType vector.StringVector // Types defined in C header.
 
 	file, err := os.Open(fname, os.O_RDONLY, 0)
 	if err != nil {
@@ -123,7 +126,10 @@ func translateC(fname string) os.Error {
 
 		// === Translate type definitions.
 		if sub := reType.FindStringSubmatch(line); sub != nil {
-			gotype, ok := ctypeTogo(sub[2])
+			// Add the new type.
+			extraType.Push(sub[3])
+
+			gotype, ok := ctypeTogo(sub[2], &extraType)
 			line = fmt.Sprintf("type %s %s", sub[3], gotype)
 
 			if sub[4] != "\n" {
@@ -178,7 +184,7 @@ func translateC(fname string) os.Error {
 		} else {
 			if sub := reStructField.FindStringSubmatch(line); sub != nil {
 				// Translate the field type.
-				gotype, ok := ctypeTogo(sub[1])
+				gotype, ok := ctypeTogo(sub[1], &extraType)
 
 				// === Translate the field name.
 				fieldName := reStructFieldName.FindStringSubmatch(sub[2])
@@ -221,8 +227,15 @@ func translateC(fname string) os.Error {
 	return nil
 }
 
-// Turns a type's string from C to Go.
-func ctypeTogo(ctype string) (gotype string, ok bool) {
+// Translates a C type definition into Go definition. The C header could have
+// defined new types so they're checked in the firs place.
+func ctypeTogo(ctype string, extraCtype *vector.StringVector) (gotype string, ok bool) {
+	for _, v := range *extraCtype {
+		if v == ctype {
+			return ctype, true
+		}
+	}
+
 	switch ctype {
 	case "char", "signed char", "signed short int", "short int", "short":
 		return "int8", true
