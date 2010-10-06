@@ -28,7 +28,16 @@ var goHeader = `// {cmd}
 // MACHINE GENERATED.
 
 package {pkg}
+
 `
+
+var (
+	system      = flag.String("s", "", "The operating system")
+	pkgName     = flag.String("p", "", "The name of the package")
+	listSystems = flag.Bool("l", false, "List of valid systems")
+	write       = flag.Bool("w", false,
+		"If set, write each input file with its output.")
+)
 
 
 func usage() {
@@ -39,7 +48,7 @@ func usage() {
 
 
 // Translates C type declaration into Go type declaration.
-func translateC(fname string) os.Error {
+func translateC(cHeader string) os.Error {
 	// === Regular expressions
 	reSkip := regexp.MustCompile(`^(\n|//)`) // Empty lines and comments.
 
@@ -56,23 +65,49 @@ func translateC(fname string) os.Error {
 	reStartMultipleComment := regexp.MustCompile(`^/\*(.+)?`)
 	reMiddleMultipleComment := regexp.MustCompile(`^[ \t*]*(.+)`)
 	reEndMultipleComment := regexp.MustCompile(`^(.+)?\*/`)
+	// ===
+
+	// Check the extension.
+	if path.Ext(cHeader) != ".h" {
+		return os.NewError("error extension")
+	}
 
 	// === File to read
 	var isMultipleComment, isDefine, isStruct bool
 	var extraType vector.StringVector // Types defined in C header.
 
-	file, err := os.Open(fname, os.O_RDONLY, 0)
+	inFile, err := os.Open(cHeader, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer inFile.Close()
 
-	r := bufio.NewReader(file)
+	inBuf := bufio.NewReader(inFile)
 
-	fmt.Println(goHeader)
+	// === File to write in the actual directory.
+	var outBuf *bufio.Writer
+
+	if *write {
+		goHeader := strings.Split(path.Base(cHeader), ".h", 2)[0]
+		goHeader = fmt.Sprintf("%s_%s.go", goHeader, *system)
+
+		outFile, err := os.Open(goHeader, os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			return err
+		}
+		defer outFile.Close()
+
+		outBuf = bufio.NewWriter(outFile)
+	} else {
+		outBuf = bufio.NewWriter(os.Stdout)
+	}
+
+	if _, err := outBuf.WriteString(goHeader); err != nil {
+		return err
+	}
 
 	for {
-		line, err := r.ReadString('\n')
+		line, err := inBuf.ReadString('\n')
 		if err == os.EOF {
 			break
 		}
@@ -99,21 +134,27 @@ func translateC(fname string) os.Error {
 			if sub := reStartMultipleComment.FindStringSubmatch(line); sub != nil {
 				if sub[1] != "\n" {
 					line = "// " + sub[1]
-					fmt.Print(line)
+					if _, err := outBuf.WriteString(line); err != nil {
+						return err
+					}
 				}
 				continue
 			}
 			if sub := reEndMultipleComment.FindStringSubmatch(line); sub != nil {
 				if sub[1] != "" {
 					line = "// " + sub[1] + "\n"
-					fmt.Print(line)
+					if _, err := outBuf.WriteString(line); err != nil {
+						return err
+					}
 				}
 				isMultipleComment = false
 				continue
 			}
 			if sub := reMiddleMultipleComment.FindStringSubmatch(line); sub != nil {
 				line = "// " + sub[1]
-				fmt.Print(line)
+				if _, err := outBuf.WriteString(line); err != nil {
+					return err
+				}
 				continue
 			}
 		}
@@ -135,7 +176,9 @@ func translateC(fname string) os.Error {
 				line = COMMENT_C_LINE + line
 			}
 
-			fmt.Print(line)
+			if _, err := outBuf.WriteString(line); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -143,7 +186,9 @@ func translateC(fname string) os.Error {
 		if sub := reDefine.FindStringSubmatch(line); sub != nil {
 			if !isDefine {
 				isDefine = true
-				fmt.Print("const (\n")
+				if _, err := outBuf.WriteString("const (\n"); err != nil {
+					return err
+				}
 			}
 			line = fmt.Sprintf("%s = %s", sub[2], sub[3])
 
@@ -153,11 +198,15 @@ func translateC(fname string) os.Error {
 				line = COMMENT_C_LINE + line
 			}
 
-			fmt.Print(line)
+			if _, err := outBuf.WriteString(line); err != nil {
+				return err
+			}
 			continue
 		}
 		if isDefine && line == "\n" {
-			fmt.Print(")\n\n")
+			if _, err := outBuf.WriteString(")\n\n"); err != nil {
+				return err
+			}
 			isDefine = false
 			continue
 		}
@@ -168,11 +217,16 @@ func translateC(fname string) os.Error {
 				isStruct = true
 
 				if isDefine {
-					fmt.Print(")\n")
+					if _, err := outBuf.WriteString(")\n"); err != nil {
+						return err
+					}
 					isDefine = false
 				}
 
-				fmt.Printf("type %s struct {\n", strings.Title(sub[2]))
+				if _, err := outBuf.WriteString(fmt.Sprintf(
+					"type %s struct {\n", strings.Title(sub[2]))); err != nil {
+					return err
+				}
 				continue
 			}
 		} else {
@@ -199,11 +253,15 @@ func translateC(fname string) os.Error {
 					line = COMMENT_C_LINE + line
 				}
 
-				fmt.Print(line)
+				if _, err := outBuf.WriteString(line); err != nil {
+					return err
+				}
 				continue
 			}
 			if strings.HasPrefix(line, "}") {
-				fmt.Print(strings.Replace(line, ";", "", 1))
+				if _, err := outBuf.WriteString(strings.Replace(line, ";", "", 1)); err != nil {
+					return err
+				}
 				isStruct = false
 				continue
 			}
@@ -215,9 +273,14 @@ func translateC(fname string) os.Error {
 			line = COMMENT_C_LINE + line
 		}
 
-		fmt.Print(line)
+		if _, err := outBuf.WriteString(line); err != nil {
+			return err
+		}
 	}
 
+	if err := outBuf.Flush(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -253,12 +316,6 @@ func ctypeTogo(ctype string, extraCtype *vector.StringVector) (gotype string, ok
 
 
 func main() {
-	var (
-		system      = flag.String("s", "", "The operating system")
-		pkgName     = flag.String("p", "", "The name of the package")
-		listSystems = flag.Bool("l", false, "List of valid systems")
-	)
-
 	validSystems := []string{"darwin", "freebsd", "linux", "windows"}
 	var isSystem bool
 
