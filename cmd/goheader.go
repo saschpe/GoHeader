@@ -31,6 +31,7 @@ package {pkg}
 
 `
 
+// Flags
 var (
 	system      = flag.String("s", "", "The operating system")
 	pkgName     = flag.String("p", "", "The name of the package")
@@ -91,7 +92,7 @@ func translateC(cHeader string) os.Error {
 		goHeader := strings.Split(path.Base(cHeader), ".h", 2)[0]
 		goHeader = fmt.Sprintf("%s_%s.go", goHeader, *system)
 
-		outFile, err := os.Open(goHeader, os.O_CREATE|os.O_RDWR, 0644)
+		outFile, err := os.Open(goHeader, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}
@@ -350,10 +351,14 @@ func main() {
 	goHeader = strings.Replace(goHeader, "{cmd}", path.Base(cmd), 1)
 	goHeader = strings.Replace(goHeader, "{pkg}", *pkgName, 1)
 
-	File := "../test/header.h" // !!!
-	if err := translateC(File); err != nil {
-		fmt.Fprintf(os.Stderr, err.String())
-		os.Exit(1)
+	// Translate all headers passed in command line.
+	for _, file := range flag.Args() {
+		if err := translateC(file); err != nil {
+			fmt.Fprintf(os.Stderr, err.String())
+			os.Exit(1)
+		}
 	}
+
+//	File := "../test/header.h" //!!!
 }
 
