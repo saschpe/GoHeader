@@ -56,10 +56,11 @@ func translateC(cHeader string) os.Error {
 	reType := regexp.MustCompile(`^(typedef)[ \t]+(.+)[ \t]+(.+)[;](.+)?`)
 
 	reStruct := regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
-	reStructField := regexp.MustCompile(`^[ \t]*(.+)[ \t]+(.+)[;](.+)?`)
+	reStructField := regexp.MustCompile(`^(.+)[ \t]+(.+)[;](.+)?`)
 	reStructFieldName := regexp.MustCompile(`^([^_]*_)?(.+)`)
 
-	reDefine := regexp.MustCompile(`^[ \t]*#[ \t]*(define|DEFINE)[ \t]+([^ \t]+)[ \t]+(.+)`)
+	reDefine := regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+([^ \t]+)[ \t]+(.+)`)
+	reDefineOnly := regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+`)
 	reDefineMacro := regexp.MustCompile(`^.*(\(.*\))`)
 
 	reSingleComment := regexp.MustCompile(`^(.+)?/\*[ \t]*(.+)[ \t]*\*/`)
@@ -74,7 +75,7 @@ func translateC(cHeader string) os.Error {
 	}
 
 	// === File to read
-	var isMultipleComment, isDefine, isStruct bool
+	var isMultipleComment, isDefineBlock, isStruct bool
 	var extraType vector.StringVector // Types defined in C header.
 
 	inFile, err := os.Open(cHeader, os.O_RDONLY, 0)
@@ -187,18 +188,18 @@ func translateC(cHeader string) os.Error {
 		if sub := reDefine.FindStringSubmatch(line); sub != nil {
 			line = fmt.Sprintf("%s = %s", sub[2], sub[3])
 
-			if !isDefine {
+			if !isDefineBlock {
 				// Get characters of next line.
-				startNextLine, err := inBuf.Peek(6)
+				startNextLine, err := inBuf.Peek(10)
 				if err != nil {
 					return err
 				}
 
 				// Constant in single line.
-				if startNextLine[0] == '\n' || string(startNextLine) == "struct" {
+				if startNextLine[0] == '\n' || !reDefineOnly.Match(startNextLine) {
 					line = "const " + line
 				} else {
-					isDefine = true
+					isDefineBlock = true
 					line = "const (\n" + line
 				}
 			}
@@ -215,11 +216,11 @@ func translateC(cHeader string) os.Error {
 			continue
 		}
 
-		if isDefine && line == "\n" {
+		if isDefineBlock && line == "\n" {
 			if _, err := outBuf.WriteString(")\n\n"); err != nil {
 				return err
 			}
-			isDefine = false
+			isDefineBlock = false
 			continue
 		}
 
@@ -228,11 +229,11 @@ func translateC(cHeader string) os.Error {
 			if sub := reStruct.FindStringSubmatch(line); sub != nil {
 				isStruct = true
 
-				if isDefine {
+				if isDefineBlock {
 					if _, err := outBuf.WriteString(")\n"); err != nil {
 						return err
 					}
-					isDefine = false
+					isDefineBlock = false
 				}
 
 				if _, err := outBuf.WriteString(fmt.Sprintf(
