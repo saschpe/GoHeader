@@ -11,7 +11,7 @@ include $(GOROOT)/src/Make.inc
 
 TARG=goheader
 GOFILES=\
-	main.go\
+	goheader.go\
 
 include $(GOROOT)/src/Make.cmd
 
