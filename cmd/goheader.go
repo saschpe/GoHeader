@@ -185,13 +185,23 @@ func translateC(cHeader string) os.Error {
 
 		// === Translate defines.
 		if sub := reDefine.FindStringSubmatch(line); sub != nil {
+			line = fmt.Sprintf("%s = %s", sub[2], sub[3])
+
 			if !isDefine {
-				isDefine = true
-				if _, err := outBuf.WriteString("const (\n"); err != nil {
+				// Get characters of next line.
+				startNextLine, err := inBuf.Peek(6)
+				if err != nil {
 					return err
 				}
+
+				// Constant in single line.
+				if startNextLine[0] == '\n' || string(startNextLine) == "struct" {
+					line = "const " + line
+				} else {
+					isDefine = true
+					line = "const (\n" + line
+				}
 			}
-			line = fmt.Sprintf("%s = %s", sub[2], sub[3])
 
 			// Removes comment (if any) to ckeck if it is a macro.
 			lastField := strings.Split(sub[3], "//", -1)[0]
@@ -204,6 +214,7 @@ func translateC(cHeader string) os.Error {
 			}
 			continue
 		}
+
 		if isDefine && line == "\n" {
 			if _, err := outBuf.WriteString(")\n\n"); err != nil {
 				return err
