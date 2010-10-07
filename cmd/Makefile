@@ -11,7 +11,10 @@ include $(GOROOT)/src/Make.inc
 
 TARG=goheader
 GOFILES=\
+	c.go\
+	format.go\
 	goheader.go\
+	util.go\
 
 include $(GOROOT)/src/Make.cmd
 
