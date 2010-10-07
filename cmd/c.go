@@ -21,6 +21,10 @@ import (
 
 
 // Translates C type declaration into Go type declaration.
+//
+// NOTE: the regular expression for single comments (reSingleComment) returns
+// spaces before of "*/".
+// The issue is that Go's regexp lib. doesn't support non greedy matches.
 func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 	var isMultipleComment, isDefineBlock, isStruct bool
 	var extraType vector.StringVector // Types defined in the header file.
@@ -63,7 +67,7 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 		if !isMultipleComment {
 			if sub := reSingleComment.FindStringSubmatch(line); sub != nil {
 				isSingleComment = true
-				line = "// " + sub[2] + "\n"
+				line = "// " + strings.TrimRight(sub[2], " ") + "\n"
 
 				if sub[1] != "" {
 					line = sub[1] + line
