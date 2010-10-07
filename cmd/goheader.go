@@ -46,7 +46,7 @@ func usage() {
 }
 
 func processFile(filename string) os.Error {
-	var rawOutput bytes.Buffer
+	rawOutput := new(bytes.Buffer)
 
 	file, err := os.Open(filename, os.O_RDONLY, 0)
 	if err != nil {
@@ -54,11 +54,11 @@ func processFile(filename string) os.Error {
 	}
 	defer file.Close()
 
-	if err := translateC(&rawOutput, file); err != nil {
+	if err := translateC(rawOutput, file); err != nil {
 		return err
 	}
 
-	if err := format(filename, &rawOutput); err != nil {
+	if err := format(filename, rawOutput); err != nil {
 		return err
 	}
 

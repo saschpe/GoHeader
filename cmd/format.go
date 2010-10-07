@@ -30,7 +30,7 @@ const (
 
 // Formats the Go source code.
 func format(filename string, rawOutput *bytes.Buffer) os.Error {
-	var output bytes.Buffer
+	output := new(bytes.Buffer)
 
 	// The output is an abstract syntax tree (AST) representing the Go source.
 	ast, err := parser.ParseFile(filename, rawOutput.Bytes(), PARSER_MODE)
@@ -39,7 +39,7 @@ func format(filename string, rawOutput *bytes.Buffer) os.Error {
 	}
 
 	// Print an AST node to output.
-	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH, nil}).Fprint(&output, ast)
+	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH, nil}).Fprint(output, ast)
 	if err != nil {
 		return err
 	}

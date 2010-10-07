@@ -27,7 +27,7 @@ import (
 // The issue is that Go's regexp lib. doesn't support non greedy matches.
 func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 	var isMultipleComment, isDefineBlock, isStruct bool
-	var extraType vector.StringVector // Types defined in the header file.
+	extraType := new(vector.StringVector) // Types defined in the header file.
 
 	// === Regular expressions
 	reSkip := regexp.MustCompile(`^(\n|//)`) // Empty lines and comments.
@@ -113,7 +113,7 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 			// Add the new type.
 			extraType.Push(sub[3])
 
-			gotype, ok := ctypeTogo(sub[2], &extraType)
+			gotype, ok := ctypeTogo(sub[2], extraType)
 			line = fmt.Sprintf("type %s %s", sub[3], gotype)
 
 			if sub[4] != "\n" {
@@ -192,7 +192,7 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 		} else {
 			if sub := reStructField.FindStringSubmatch(line); sub != nil {
 				// Translate the field type.
-				gotype, ok := ctypeTogo(sub[1], &extraType)
+				gotype, ok := ctypeTogo(sub[1], extraType)
 
 				// === Translate the field name.
 				fieldName := reStructFieldName.FindStringSubmatch(sub[2])
