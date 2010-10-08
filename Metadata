@@ -2,18 +2,18 @@
 
 [Main]
 version: 
-summary: 
-download-url: 
+summary: Tool for translating C type declarations into its Go equivalent
+download-url: git://github.com/kless/goheader.git
 author: John Mac
 author-email: charles.beck@sent.com
 
 [Optional]
-home-page: 
-keywords: 
+home-page: http://github.com/kless/goheader
+keywords: translator, header, C
 
 [CORE]
 metadata-version: 1.1
-project-type: app
+project-type: tool
 project-name: goheader
 package-name: goheader
 license: bsd-2
