@@ -18,16 +18,7 @@ import (
 )
 
 
-const COMMENT_LINE = "//!!! "
-
 var exitCode = 0
-
-var goBase = `// {cmd}
-// MACHINE GENERATED.
-
-package {pkg}
-
-`
 
 // Flags
 var (
@@ -94,7 +85,7 @@ func main() {
 		}
 	}
 	if !isSystem {
-		fmt.Fprintf(os.Stderr, "ERROR: System passed in flag 's' is invalid\n")
+		fmt.Fprintf(os.Stderr, "ERROR: System passed in flag '-s' is invalid\n")
 		os.Exit(2)
 	}
 

@@ -20,6 +20,36 @@ import (
 )
 
 
+const COMMENT_LINE = "//!!! "
+
+var goBase = `// {cmd}
+// MACHINE GENERATED.
+
+package {pkg}
+
+`
+
+// Regular expressions for C header.
+var (
+	reSkip = regexp.MustCompile(`^(\n|//)`) // Empty lines and comments.
+
+	reType = regexp.MustCompile(`^(typedef)[ \t]+(.+)[ \t]+(.+)[;](.+)?`)
+
+	reStruct          = regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
+	reStructField     = regexp.MustCompile(`^(.+)[ \t]+(.+)[;](.+)?`)
+	reStructFieldName = regexp.MustCompile(`^([^_]*_)?(.+)`)
+
+	reDefine      = regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+([^ \t]+)[ \t]+(.+)`)
+	reDefineOnly  = regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+`)
+	reDefineMacro = regexp.MustCompile(`^.*(\(.*\))`)
+
+	reSingleComment         = regexp.MustCompile(`^(.+)?/\*[ \t]*(.+)[ \t]*\*/`)
+	reStartMultipleComment  = regexp.MustCompile(`^/\*(.+)?`)
+	reMiddleMultipleComment = regexp.MustCompile(`^[ \t*]*(.+)`)
+	reEndMultipleComment    = regexp.MustCompile(`^(.+)?\*/`)
+)
+
+
 // Translates C type declaration into Go type declaration.
 //
 // NOTE: the regular expression for single comments (reSingleComment) returns
@@ -28,25 +58,6 @@ import (
 func translateC(output *bytes.Buffer, file *os.File) os.Error {
 	var isMultipleComment, isDefineBlock, isStruct bool
 	extraType := new(vector.StringVector) // Types defined in the header file.
-
-	// === Regular expressions
-	reSkip := regexp.MustCompile(`^(\n|//)`) // Empty lines and comments.
-
-	reType := regexp.MustCompile(`^(typedef)[ \t]+(.+)[ \t]+(.+)[;](.+)?`)
-
-	reStruct := regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
-	reStructField := regexp.MustCompile(`^(.+)[ \t]+(.+)[;](.+)?`)
-	reStructFieldName := regexp.MustCompile(`^([^_]*_)?(.+)`)
-
-	reDefine := regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+([^ \t]+)[ \t]+(.+)`)
-	reDefineOnly := regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+`)
-	reDefineMacro := regexp.MustCompile(`^.*(\(.*\))`)
-
-	reSingleComment := regexp.MustCompile(`^(.+)?/\*[ \t]*(.+)[ \t]*\*/`)
-	reStartMultipleComment := regexp.MustCompile(`^/\*(.+)?`)
-	reMiddleMultipleComment := regexp.MustCompile(`^[ \t*]*(.+)`)
-	reEndMultipleComment := regexp.MustCompile(`^(.+)?\*/`)
-	// ===
 
 	output.WriteString(goBase)
 
