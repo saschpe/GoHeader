@@ -17,47 +17,58 @@ import (
 	"strings"
 )
 
-
 var exitCode = 0
+
+// Represents the header file to translate. It has the Go output in both raw and
+// formatted.
+type translate struct {
+	filename string        // The header file
+	raw, fmt *bytes.Buffer // The Go output
+}
+
 
 // Flags
 var (
 	system      = flag.String("s", "", "The operating system.")
 	pkgName     = flag.String("p", "", "The name of the package.")
 	listSystems = flag.Bool("l", false, "List of valid systems.")
-	write       = flag.Bool("w", false,
-		"If set, write its output to file.")
+	write       = flag.Bool("w", false, "If set, write its output to file.")
 	debug       = flag.Bool("d", false,
 		"If set, it shows the source code translated but without be formatted.")
 )
 
-
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: goheader -s system -p package [path ...]\n")
+	fmt.Fprintf(os.Stderr, "Usage: goheader -s system -p package [-d] [path ...]\n")
 	flag.PrintDefaults()
 	os.Exit(2)
 }
 
-func processFile(filename string) os.Error {
-	rawOutputGo := new(bytes.Buffer)
-	fmtOutputGo := new(bytes.Buffer)
 
+func processFile(filename string) os.Error {
 	file, err := os.Open(filename, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	if err := translateC(rawOutputGo, file); err != nil {
+	_translate := &translate{
+		filename: filename,
+		raw: &bytes.Buffer{},
+		fmt: &bytes.Buffer{},
+	}
+
+	// ===
+
+	if err := _translate.C(file); err != nil {
 		return err
 	}
 
-	err = format(fmtOutputGo, rawOutputGo, filename)
+	err = _translate.format()
 	if !*debug && err != nil {
 		return err
 	}
 
-	if err := writeGo(fmtOutputGo, rawOutputGo, filename); err != nil {
+	if err := _translate.write(); err != nil {
 		return err
 	}
 

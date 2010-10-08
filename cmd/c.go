@@ -11,7 +11,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"container/vector"
 	"fmt"
 	"regexp"
@@ -56,11 +55,11 @@ var (
 // NOTE: the regular expression for single comments (reSingleComment) returns
 // spaces before of "*/".
 // The issue is that Go's regexp lib. doesn't support non greedy matches.
-func translateC(output *bytes.Buffer, file *os.File) os.Error {
+func (self *translate) C(file *os.File) os.Error {
 	var isMultipleComment, isTypeBlock, isConstBlock, isStruct bool
 	extraTypedef := new(vector.StringVector) // Types defined in the header file.
 
-	output.WriteString(goBase)
+	self.raw.WriteString(goBase)
 
 	// === File to read
 	fileBuf := bufio.NewReader(file)
@@ -92,22 +91,22 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 		if isMultipleComment {
 			if sub := reStartMultipleComment.FindStringSubmatch(line); sub != nil {
 				if sub[1] != "\n" {
-					output.WriteString("// " + sub[1])
+					self.raw.WriteString("// " + sub[1])
 				}
 				continue
 			}
 			if sub := reEndMultipleComment.FindStringSubmatch(line); sub != nil {
 				if sub[1] != "" {
-					output.WriteString("// " + sub[1] + "\n")
+					self.raw.WriteString("// " + sub[1] + "\n")
 				}
 				isMultipleComment = false
 				continue
 			}
 			if sub := reMiddleMultipleComment.FindStringSubmatch(line); sub != nil {
 				if sub[1] != "\n" {
-					output.WriteString("// " + sub[1])
+					self.raw.WriteString("// " + sub[1])
 				} else {
-					output.WriteString("//" + sub[1])
+					self.raw.WriteString("//" + sub[1])
 				}
 				continue
 			}
@@ -121,11 +120,11 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 			gotype, ok := ctypeTogo(sub[2], extraTypedef)
 			line = fmt.Sprintf("%s %s", sub[3], gotype)
 
-			/*if sub[4] != "\n" {
+			if sub[4] != "\n" {
 				line += sub[4]
 			} else {
 				line += "\n"
-			}*/
+			}
 
 			if !isTypeBlock {
 				// Get characters of next line.
@@ -147,12 +146,12 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 				line = COMMENT_LINE + line
 			}
 
-			output.WriteString(line)
+			self.raw.WriteString(line)
 			continue
 		}
 
 		if isTypeBlock && line == "\n" {
-			output.WriteString(")\n\n")
+			self.raw.WriteString(")\n\n")
 			isTypeBlock = false
 			continue
 		}
@@ -183,12 +182,12 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 				line = COMMENT_LINE + line
 			}
 
-			output.WriteString(line)
+			self.raw.WriteString(line)
 			continue
 		}
 
 		if isConstBlock && line == "\n" {
-			output.WriteString(")\n\n")
+			self.raw.WriteString(")\n\n")
 			isConstBlock = false
 			continue
 		}
@@ -199,11 +198,11 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 				isStruct = true
 
 				if isConstBlock {
-					output.WriteString(")\n")
+					self.raw.WriteString(")\n")
 					isConstBlock = false
 				}
 
-				output.WriteString(fmt.Sprintf(
+				self.raw.WriteString(fmt.Sprintf(
 					"type %s struct {\n", strings.Title(sub[2])))
 				continue
 			}
@@ -231,11 +230,11 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 					line = COMMENT_LINE + line
 				}
 
-				output.WriteString(line)
+				self.raw.WriteString(line)
 				continue
 			}
 			if strings.HasPrefix(line, "}") {
-				output.WriteString(strings.Replace(line, ";", "", 1))
+				self.raw.WriteString(strings.Replace(line, ";", "", 1))
 				isStruct = false
 				continue
 			}
@@ -247,7 +246,7 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 			line = COMMENT_LINE + line
 		}
 
-		output.WriteString(line)
+		self.raw.WriteString(line)
 	}
 
 	return nil

@@ -29,35 +29,35 @@ const (
 
 
 // Formats the Go source code.
-func format(fmtOutputGo, rawOutputGo *bytes.Buffer, filename string) os.Error {
+func (self *translate) format() os.Error {
 	// The output is an abstract syntax tree (AST) representing the Go source.
-	ast, err := parser.ParseFile(filename, rawOutputGo.Bytes(), PARSER_MODE)
+	ast, err := parser.ParseFile(self.filename, self.raw.Bytes(), PARSER_MODE)
 	if err != nil {
 		return err
 	}
 
 	// Print an AST node to output.
-	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH, nil}).Fprint(fmtOutputGo, ast)
+	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH, nil}).Fprint(self.fmt, ast)
 	if err != nil {
 		return err
 	}
 
-	fmtOutputGo.WriteByte('\n')
+	self.fmt.WriteByte('\n')
 
 	return nil
 }
 
-func writeGo(fmtOutputGo, rawOutputGo *bytes.Buffer, filename string) os.Error {
+func (self *translate) write() os.Error {
 	output := new(bytes.Buffer)
 
 	if !*debug {
-		output = fmtOutputGo
+		output = self.fmt
 	} else {
-		output = rawOutputGo
+		output = self.raw
 	}
 
 	if *write {
-		filename = strings.Split(path.Base(filename), ".h", 2)[0]
+		filename := strings.Split(path.Base(self.filename), ".h", 2)[0]
 		filename = fmt.Sprintf("%s_%s.go", filename, *system)
 
 		outFile, err := os.Open(filename, os.O_CREATE|os.O_WRONLY, 0644)
