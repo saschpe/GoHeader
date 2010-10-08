@@ -44,6 +44,8 @@ func format(filename string, rawOutput *bytes.Buffer) os.Error {
 		return err
 	}
 
+	output.WriteByte('\n')
+
 	if *write {
 		filename = strings.Split(path.Base(filename), ".h", 2)[0]
 		filename = fmt.Sprintf("%s_%s.go", filename, *system)
