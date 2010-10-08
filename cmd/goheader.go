@@ -34,7 +34,7 @@ var (
 	listSystems = flag.Bool("l", false, "List of valid systems.")
 	write       = flag.Bool("w", false, "If set, write its output to file.")
 	debug       = flag.Bool("d", false,
-		"If set, it shows the source code translated but without be formatted.")
+		"If set, it outputs the source code translated but without be formatted.")
 )
 
 func usage() {
@@ -51,13 +51,7 @@ func processFile(filename string) os.Error {
 	}
 	defer file.Close()
 
-	_translate := &translate{
-		filename: filename,
-		raw: &bytes.Buffer{},
-		fmt: &bytes.Buffer{},
-	}
-
-	// ===
+	_translate := &translate{filename, &bytes.Buffer{}, &bytes.Buffer{}}
 
 	if err := _translate.C(file); err != nil {
 		return err
