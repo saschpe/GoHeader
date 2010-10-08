@@ -33,7 +33,8 @@ package {pkg}
 var (
 	reSkip = regexp.MustCompile(`^(\n|//)`) // Empty lines and comments.
 
-	reType = regexp.MustCompile(`^(typedef)[ \t]+(.+)[ \t]+(.+)[;](.+)?`)
+	reTypedef     = regexp.MustCompile(`^(typedef)[ \t]+(.+)[ \t]+(.+)[;](.+)?`)
+	reTypedefOnly = regexp.MustCompile(`^(typedef)[ \t]+`)
 
 	reStruct          = regexp.MustCompile(`^(struct)[ \t]+(.+)[ \t]*{`)
 	reStructField     = regexp.MustCompile(`^(.+)[ \t]+(.+)[;](.+)?`)
@@ -56,8 +57,8 @@ var (
 // spaces before of "*/".
 // The issue is that Go's regexp lib. doesn't support non greedy matches.
 func translateC(output *bytes.Buffer, file *os.File) os.Error {
-	var isMultipleComment, isDefineBlock, isStruct bool
-	extraType := new(vector.StringVector) // Types defined in the header file.
+	var isMultipleComment, isTypedefBlock, isDefineBlock, isStruct bool
+	extraTypedef := new(vector.StringVector) // Types defined in the header file.
 
 	output.WriteString(goBase)
 
@@ -103,29 +104,56 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 				continue
 			}
 			if sub := reMiddleMultipleComment.FindStringSubmatch(line); sub != nil {
-				output.WriteString("// " + sub[1])
+				if sub[1] != "\n" {
+					output.WriteString("// " + sub[1])
+				} else {
+					output.WriteString("//" + sub[1])
+				}
 				continue
 			}
 		}
 
 		// === Translate type definitions.
-		if sub := reType.FindStringSubmatch(line); sub != nil {
+		if sub := reTypedef.FindStringSubmatch(line); sub != nil {
 			// Add the new type.
-			extraType.Push(sub[3])
+			extraTypedef.Push(sub[3])
 
-			gotype, ok := ctypeTogo(sub[2], extraType)
-			line = fmt.Sprintf("type %s %s", sub[3], gotype)
+			gotype, ok := ctypeTogo(sub[2], extraTypedef)
+			line = fmt.Sprintf("%s %s", sub[3], gotype)
 
 			if sub[4] != "\n" {
 				line += sub[4]
 			} else {
 				line += "\n"
 			}
+
+			if !isTypedefBlock {
+				// Get characters of next line.
+				startNextLine, err := fileBuf.Peek(10)
+				if err != nil {
+					return err
+				}
+
+				// In single line.
+				if !reTypedefOnly.Match(startNextLine) {
+					line = "type " + line
+				} else {
+					isTypedefBlock = true
+					line = "type (\n" + line
+				}
+			}
+
 			if !ok {
 				line = COMMENT_LINE + line
 			}
 
 			output.WriteString(line)
+			continue
+		}
+
+		if isTypedefBlock && line == "\n" {
+			output.WriteString(")\n\n")
+			isTypedefBlock = false
 			continue
 		}
 
@@ -182,7 +210,7 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 		} else {
 			if sub := reStructField.FindStringSubmatch(line); sub != nil {
 				// Translate the field type.
-				gotype, ok := ctypeTogo(sub[1], extraType)
+				gotype, ok := ctypeTogo(sub[1], extraTypedef)
 
 				// === Translate the field name.
 				fieldName := reStructFieldName.FindStringSubmatch(sub[2])
