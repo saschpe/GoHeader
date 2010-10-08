@@ -25,7 +25,7 @@ import (
 // NOTE: the regular expression for single comments (reSingleComment) returns
 // spaces before of "*/".
 // The issue is that Go's regexp lib. doesn't support non greedy matches.
-func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
+func translateC(output *bytes.Buffer, file *os.File) os.Error {
 	var isMultipleComment, isDefineBlock, isStruct bool
 	extraType := new(vector.StringVector) // Types defined in the header file.
 
@@ -48,9 +48,7 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 	reEndMultipleComment := regexp.MustCompile(`^(.+)?\*/`)
 	// ===
 
-	if _, err = output.WriteString(goBase); err != nil {
-		return
-	}
+	output.WriteString(goBase)
 
 	// === File to read
 	fileBuf := bufio.NewReader(file)
@@ -82,28 +80,19 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 		if isMultipleComment {
 			if sub := reStartMultipleComment.FindStringSubmatch(line); sub != nil {
 				if sub[1] != "\n" {
-					line = "// " + sub[1]
-					if _, err = output.WriteString(line); err != nil {
-						return
-					}
+					output.WriteString("// " + sub[1])
 				}
 				continue
 			}
 			if sub := reEndMultipleComment.FindStringSubmatch(line); sub != nil {
 				if sub[1] != "" {
-					line = "// " + sub[1] + "\n"
-					if _, err = output.WriteString(line); err != nil {
-						return
-					}
+					output.WriteString("// " + sub[1] + "\n")
 				}
 				isMultipleComment = false
 				continue
 			}
 			if sub := reMiddleMultipleComment.FindStringSubmatch(line); sub != nil {
-				line = "// " + sub[1]
-				if _, err = output.WriteString(line); err != nil {
-					return
-				}
+				output.WriteString("// " + sub[1])
 				continue
 			}
 		}
@@ -125,9 +114,7 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 				line = COMMENT_LINE + line
 			}
 
-			if _, err = output.WriteString(line); err != nil {
-				return
-			}
+			output.WriteString(line)
 			continue
 		}
 
@@ -139,7 +126,7 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 				// Get characters of next line.
 				startNextLine, err := fileBuf.Peek(10)
 				if err != nil {
-					return
+					return err
 				}
 
 				// Constant in single line.
@@ -157,16 +144,12 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 				line = COMMENT_LINE + line
 			}
 
-			if _, err = output.WriteString(line); err != nil {
-				return
-			}
+			output.WriteString(line)
 			continue
 		}
 
 		if isDefineBlock && line == "\n" {
-			if _, err = output.WriteString(")\n\n"); err != nil {
-				return
-			}
+			output.WriteString(")\n\n")
 			isDefineBlock = false
 			continue
 		}
@@ -177,16 +160,12 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 				isStruct = true
 
 				if isDefineBlock {
-					if _, err = output.WriteString(")\n"); err != nil {
-						return
-					}
+					output.WriteString(")\n")
 					isDefineBlock = false
 				}
 
-				if _, err = output.WriteString(fmt.Sprintf(
-					"type %s struct {\n", strings.Title(sub[2]))); err != nil {
-					return
-				}
+				output.WriteString(fmt.Sprintf(
+					"type %s struct {\n", strings.Title(sub[2])))
 				continue
 			}
 		} else {
@@ -213,15 +192,11 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 					line = COMMENT_LINE + line
 				}
 
-				if _, err = output.WriteString(line); err != nil {
-					return
-				}
+				output.WriteString(line)
 				continue
 			}
 			if strings.HasPrefix(line, "}") {
-				if _, err = output.WriteString(strings.Replace(line, ";", "", 1)); err != nil {
-					return
-				}
+				output.WriteString(strings.Replace(line, ";", "", 1))
 				isStruct = false
 				continue
 			}
@@ -233,12 +208,10 @@ func translateC(output *bytes.Buffer, file *os.File) (err os.Error) {
 			line = COMMENT_LINE + line
 		}
 
-		if _, err = output.WriteString(line); err != nil {
-			return
-		}
+		output.WriteString(line)
 	}
 
-	return
+	return nil
 }
 
 // Translates a C type definition into Go definition. The C header could have
