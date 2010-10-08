@@ -57,7 +57,7 @@ var (
 // spaces before of "*/".
 // The issue is that Go's regexp lib. doesn't support non greedy matches.
 func translateC(output *bytes.Buffer, file *os.File) os.Error {
-	var isMultipleComment, isTypedefBlock, isDefineBlock, isStruct bool
+	var isMultipleComment, isTypeBlock, isConstBlock, isStruct bool
 	extraTypedef := new(vector.StringVector) // Types defined in the header file.
 
 	output.WriteString(goBase)
@@ -127,7 +127,7 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 				line += "\n"
 			}
 
-			if !isTypedefBlock {
+			if !isTypeBlock {
 				// Get characters of next line.
 				startNextLine, err := fileBuf.Peek(10)
 				if err != nil {
@@ -138,7 +138,7 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 				if !reTypedefOnly.Match(startNextLine) {
 					line = "type " + line
 				} else {
-					isTypedefBlock = true
+					isTypeBlock = true
 					line = "type (\n" + line
 				}
 			}
@@ -151,9 +151,9 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 			continue
 		}
 
-		if isTypedefBlock && line == "\n" {
+		if isTypeBlock && line == "\n" {
 			output.WriteString(")\n\n")
-			isTypedefBlock = false
+			isTypeBlock = false
 			continue
 		}
 
@@ -161,7 +161,7 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 		if sub := reDefine.FindStringSubmatch(line); sub != nil {
 			line = fmt.Sprintf("%s = %s", sub[2], sub[3])
 
-			if !isDefineBlock {
+			if !isConstBlock {
 				// Get characters of next line.
 				startNextLine, err := fileBuf.Peek(10)
 				if err != nil {
@@ -172,7 +172,7 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 				if !reDefineOnly.Match(startNextLine) {
 					line = "const " + line
 				} else {
-					isDefineBlock = true
+					isConstBlock = true
 					line = "const (\n" + line
 				}
 			}
@@ -187,9 +187,9 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 			continue
 		}
 
-		if isDefineBlock && line == "\n" {
+		if isConstBlock && line == "\n" {
 			output.WriteString(")\n\n")
-			isDefineBlock = false
+			isConstBlock = false
 			continue
 		}
 
@@ -198,9 +198,9 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 			if sub := reStruct.FindStringSubmatch(line); sub != nil {
 				isStruct = true
 
-				if isDefineBlock {
+				if isConstBlock {
 					output.WriteString(")\n")
-					isDefineBlock = false
+					isConstBlock = false
 				}
 
 				output.WriteString(fmt.Sprintf(
