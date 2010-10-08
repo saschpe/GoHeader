@@ -29,22 +29,32 @@ const (
 
 
 // Formats the Go source code.
-func format(filename string, rawOutput *bytes.Buffer) os.Error {
-	output := new(bytes.Buffer)
-
+func format(fmtOutputGo, rawOutputGo *bytes.Buffer, filename string) os.Error {
 	// The output is an abstract syntax tree (AST) representing the Go source.
-	ast, err := parser.ParseFile(filename, rawOutput.Bytes(), PARSER_MODE)
+	ast, err := parser.ParseFile(filename, rawOutputGo.Bytes(), PARSER_MODE)
 	if err != nil {
 		return err
 	}
 
 	// Print an AST node to output.
-	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH, nil}).Fprint(output, ast)
+	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH, nil}).Fprint(fmtOutputGo, ast)
 	if err != nil {
 		return err
 	}
 
-	output.WriteByte('\n')
+	fmtOutputGo.WriteByte('\n')
+
+	return nil
+}
+
+func writeGo(fmtOutputGo, rawOutputGo *bytes.Buffer, filename string) os.Error {
+	output := new(bytes.Buffer)
+
+	if !*debug {
+		output = fmtOutputGo
+	} else {
+		output = rawOutputGo
+	}
 
 	if *write {
 		filename = strings.Split(path.Base(filename), ".h", 2)[0]
@@ -60,7 +70,7 @@ func format(filename string, rawOutput *bytes.Buffer) os.Error {
 			return err
 		}
 	} else {
-		if _, err = os.Stdout.Write(output.Bytes()); err != nil {
+		if _, err := os.Stdout.Write(output.Bytes()); err != nil {
 			return err
 		}
 	}

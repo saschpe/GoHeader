@@ -121,11 +121,11 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 			gotype, ok := ctypeTogo(sub[2], extraTypedef)
 			line = fmt.Sprintf("%s %s", sub[3], gotype)
 
-			if sub[4] != "\n" {
+			/*if sub[4] != "\n" {
 				line += sub[4]
 			} else {
 				line += "\n"
-			}
+			}*/
 
 			if !isTypeBlock {
 				// Get characters of next line.
@@ -157,7 +157,7 @@ func translateC(output *bytes.Buffer, file *os.File) os.Error {
 			continue
 		}
 
-		// === Translate defines.
+		// === Translate 'define' to 'const'.
 		if sub := reDefine.FindStringSubmatch(line); sub != nil {
 			line = fmt.Sprintf("%s = %s", sub[2], sub[3])
 

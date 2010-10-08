@@ -27,6 +27,8 @@ var (
 	listSystems = flag.Bool("l", false, "List of valid systems.")
 	write       = flag.Bool("w", false,
 		"If set, write its output to file.")
+	debug       = flag.Bool("d", false,
+		"If set, it shows the source code translated but without be formatted.")
 )
 
 
@@ -37,7 +39,8 @@ func usage() {
 }
 
 func processFile(filename string) os.Error {
-	rawOutput := new(bytes.Buffer)
+	rawOutputGo := new(bytes.Buffer)
+	fmtOutputGo := new(bytes.Buffer)
 
 	file, err := os.Open(filename, os.O_RDONLY, 0)
 	if err != nil {
@@ -45,11 +48,16 @@ func processFile(filename string) os.Error {
 	}
 	defer file.Close()
 
-	if err := translateC(rawOutput, file); err != nil {
+	if err := translateC(rawOutputGo, file); err != nil {
 		return err
 	}
 
-	if err := format(filename, rawOutput); err != nil {
+	err = format(fmtOutputGo, rawOutputGo, filename)
+	if !*debug && err != nil {
+		return err
+	}
+
+	if err := writeGo(fmtOutputGo, rawOutputGo, filename); err != nil {
 		return err
 	}
 
