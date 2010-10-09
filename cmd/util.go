@@ -38,7 +38,7 @@ func (v fileVisitor) VisitDir(path string, f *os.FileInfo) bool {
 
 func (v fileVisitor) VisitFile(path string, f *os.FileInfo) {
 	if isHeader(f) {
-		v <- nil // Synchronize error handler
+		v <- nil // Synchronize error handler.
 		if err := processFile(path); err != nil {
 			v <- err
 		}
@@ -61,9 +61,8 @@ func walkDir(path string) {
 	}()
 	// ===
 
-	// Walk the tree.
-	pathutil.Walk(path, v, v)
-	close(v) // Terminate error handler loop
-	<-done   // Wait for all errors to be reported
+	pathutil.Walk(path, v, v) // Walk the tree.
+	close(v)                  // Terminate error handler loop.
+	<-done                    // Wait for all errors to be reported.
 }
 

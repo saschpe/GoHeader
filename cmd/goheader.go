@@ -20,7 +20,7 @@ import (
 var exitCode = 0
 
 // Represents the header file to translate. It has the Go output in both raw and
-// formatted.
+// formatted code.
 type translate struct {
 	filename string        // The header file
 	raw, fmt *bytes.Buffer // The Go output
@@ -102,13 +102,12 @@ func main() {
 		os.Exit(2)
 	}
 
-	// === Update header
+	// === Update Go base
 	cmd := strings.Join(os.Args, " ")
 	goBase = strings.Replace(goBase, "{cmd}", cmd, 1)
 	goBase = strings.Replace(goBase, "{pkg}", *pkgName, 1)
-	// ===
 
-	// Translate all headers passed in command line.
+	// === Translate all headers passed in command line.
 	for _, path := range flag.Args() {
 		switch info, err := os.Stat(path); {
 		case err != nil:
