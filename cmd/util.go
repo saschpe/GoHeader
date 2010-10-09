@@ -10,7 +10,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	pathutil "path"
@@ -20,11 +19,6 @@ import (
 func isHeader(f *os.FileInfo) bool {
 	return f.IsRegular() && !strings.HasPrefix(f.Name, ".") &&
 		strings.HasSuffix(f.Name, ".h")
-}
-
-func reportError(err os.Error) {
-	fmt.Fprintf(os.Stderr, err.String())
-	exitCode = 2
 }
 
 // === Walk into a directory

@@ -17,7 +17,6 @@ import (
 	"strings"
 )
 
-var exitCode = 0
 
 // Represents the header file to translate. It has the Go output in both raw and
 // formatted code.
