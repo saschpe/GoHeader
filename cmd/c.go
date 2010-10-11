@@ -262,17 +262,21 @@ func ctypeTogo(ctype string, extraCtype *vector.StringVector) (gotype string, ok
 	}
 
 	switch ctype {
-	case "char", "signed char", "signed short int", "short int", "short":
+	case "char", "signed char":
 		return "int8", true
-	case "unsigned char", "unsigned short int", "unsigned short":
+	case "unsigned char":
 		return "uint8", true
-	case "int", "signed int":
+	case "short", "signed short", "short int", "signed short int":
+		return "int16", true
+	case "unsigned short", "unsigned short int":
+		return "uint16", true
+	case "int", "signed int", "signed":
 		return "int16", true
 	case "unsigned int", "unsigned":
 		return "uint16", true
-	case "signed long int", "long int", "long":
+	case "long", "signed long", "long int", "signed long int":
 		return "int32", true
-	case "unsigned long int", "unsigned long":
+	case "unsigned long", "unsigned long int":
 		return "uint32", true
 	case "float":
 		return "float32", true

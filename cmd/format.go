@@ -57,6 +57,22 @@ func (self *translate) write() os.Error {
 	}
 
 	if *write {
+		/*filename := self.filename
+
+		switch *system {
+		case "linux":
+			dirBase := "/usr/include/"
+
+			if strings.HasPrefix(filename, dirBase) {
+				filename = strings.Split(filename, dirBase, 2)[1]
+				filename = strings.Replace(filename, "/", "_", -1)
+			} else {
+				filename = path.Base(filename)
+			}
+		}
+		filename = strings.Split(filename, ".h", 2)[0]
+		filename = fmt.Sprintf("%s_%s.go", filename, *system)
+		*/
 		filename := strings.Split(path.Base(self.filename), ".h", 2)[0]
 		filename = fmt.Sprintf("%s_%s.go", filename, *system)
 
