@@ -42,8 +42,6 @@ func (self *translate) format() os.Error {
 		return err
 	}
 
-	self.fmt.WriteByte('\n')
-
 	return nil
 }
 
