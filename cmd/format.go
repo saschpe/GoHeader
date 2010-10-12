@@ -69,10 +69,9 @@ func (self *translate) write() os.Error {
 			}
 		}
 		filename = strings.Split(filename, ".h", 2)[0]
-		filename = fmt.Sprintf("%s_%s.go", filename, *system)
 		*/
 		filename := strings.Split(path.Base(self.filename), ".h", 2)[0]
-		filename = fmt.Sprintf("%s_%s.go", filename, *system)
+		filename = fmt.Sprintf("h-%s_%s.go", filename, *system)
 
 		outFile, err := os.Open(filename, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
