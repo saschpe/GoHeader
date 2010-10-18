@@ -278,6 +278,8 @@ func ctypeTogo(ctype string, extraCtype *vector.StringVector) (gotype string, ok
 		return "int32", true
 	case "unsigned long", "unsigned long int":
 		return "uint32", true
+	case "size_t":
+		return "int", true
 	case "float":
 		return "float32", true
 	case "double", "long double":
