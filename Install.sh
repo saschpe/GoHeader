@@ -1,8 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/sh
 set -ev
 
-## Build the command
+## Build
 cd cmd; make install
+
+## Clean
+make clean
 
 ## Install succeeded!
 
