@@ -12,7 +12,7 @@ package main
 import (
 	"os"
 	"strings"
-	pathutil "path"
+	"path/filepath"
 )
 
 
@@ -55,7 +55,7 @@ func walkDir(path string) {
 	}()
 	// ===
 
-	pathutil.Walk(path, v, v) // Walk the tree.
+	filepath.Walk(path, v, v) // Walk the tree.
 	close(v)                  // Terminate error handler loop.
 	<-done                    // Wait for all errors to be reported.
 }
