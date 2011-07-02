@@ -177,7 +177,7 @@ func (self *translate) C(file *os.File) os.Error {
 			}
 
 			// Removes comment (if any) to ckeck if it is a macro.
-			lastField := strings.Split(sub[3], "//", -1)[0]
+			lastField := strings.Split(sub[3], "//")[0]
 			if reDefineMacro.MatchString(lastField) {
 				line = COMMENT_LINE + line
 			}
