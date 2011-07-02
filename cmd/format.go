@@ -40,7 +40,7 @@ func (self *translate) format() os.Error {
 	}
 
 	// Print an AST node to output.
-	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH, nil}).Fprint(
+	_, err = (&printer.Config{PRINTER_MODE, TAB_WIDTH}).Fprint(
 		self.fmt, fset, ast)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (self *translate) write() os.Error {
 		filename := strings.Split(path.Base(self.filename), ".h", 2)[0]
 		filename = fmt.Sprintf("h-%s_%s.go", filename, *system)
 
-		outFile, err := os.Open(filename, os.O_CREATE|os.O_WRONLY, 0644)
+		outFile, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}

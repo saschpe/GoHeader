@@ -44,7 +44,7 @@ func usage() {
 
 
 func processFile(filename string) os.Error {
-	file, err := os.Open(filename, os.O_RDONLY, 0)
+	file, err := os.OpenFile(filename, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
