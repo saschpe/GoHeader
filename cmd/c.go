@@ -15,11 +15,13 @@ import (
 	"fmt"
 	"regexp"
 	"os"
+	"strconv"
 	"strings"
 )
 
 
 const COMMENT_LINE = "//!!! "
+const NoLastEnumValue = -1000
 
 var goBase = `// {cmd}
 // MACHINE GENERATED.
@@ -39,6 +41,11 @@ var (
 	reStructField     = regexp.MustCompile(`^(.+)[ \t]+(.+)[;](.+)?`)
 	reStructFieldName = regexp.MustCompile(`^([^_]*_)?(.+)`)
 
+	reEnum      = regexp.MustCompile(`^(enum)[ \t]+(.+)[ \t]*{`)
+	reEnumValue = regexp.MustCompile(`^(.+)[ \t]*=[ \t]*([^,]+)`)
+	reEnumIota  = regexp.MustCompile(`^([^,]+)[,]?\n`)
+	reEnumEnd   = regexp.MustCompile(`^};`)
+
 	reDefine      = regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+([^ \t]+)[ \t]+(.+)`)
 	reDefineOnly  = regexp.MustCompile(`^#[ \t]*(define|DEFINE)[ \t]+`)
 	reDefineMacro = regexp.MustCompile(`^.*(\(.*\))`)
@@ -56,7 +63,8 @@ var (
 // spaces before of "*/".
 // The issue is that Go's regexp lib. doesn't support non greedy matches.
 func (self *translate) C(file *os.File) os.Error {
-	var isMultipleComment, isTypeBlock, isConstBlock, isStruct bool
+	var isMultipleComment, isTypeBlock, isConstBlock, isStruct, isEnum bool
+	lastEnumValue := -1
 	extraTypedef := new(vector.StringVector) // Types defined in the header file.
 
 	self.raw.WriteString(goBase)
@@ -192,6 +200,46 @@ func (self *translate) C(file *os.File) os.Error {
 			continue
 		}
 
+		// === Translate enums
+		if !isEnum {
+			if sub := reEnum.FindStringSubmatch(line); sub != nil {
+				isEnum = true
+				lastEnumValue = -1
+				if !isConstBlock {
+					self.raw.WriteString("const (\n")
+					isConstBlock = true
+				}
+				self.raw.WriteString(fmt.Sprintf("// enum %s\n",
+					strings.Title(sub[2])))
+				continue
+			}
+		} else {
+			if sub := reEnumEnd.FindStringSubmatch(line); sub != nil {
+				isEnum = false
+				continue
+			}
+			if sub := reEnumValue.FindStringSubmatch(line); sub != nil {
+				self.raw.WriteString(fmt.Sprintf("%s = %s\n",
+					strings.Title(sub[1]), sub[2]))
+				if v, err := strconv.Atoi(sub[2]); err == nil {
+					lastEnumValue = v
+				} else {
+					lastEnumValue = NoLastEnumValue
+				}
+				continue
+			}
+			if sub := reEnumIota.FindStringSubmatch(line); sub != nil {
+				if lastEnumValue != NoLastEnumValue {
+					lastEnumValue++
+					self.raw.WriteString(fmt.Sprintf("%s = %d\n",
+						strings.Title(sub[1]), lastEnumValue))
+					continue
+				}
+			}
+			self.raw.WriteString(fmt.Sprintf("%s%s", COMMENT_LINE, line))
+			continue
+		}
+
 		// === Translate structs.
 		if !isStruct {
 			if sub := reStruct.FindStringSubmatch(line); sub != nil {
@@ -287,4 +335,3 @@ func ctypeTogo(ctype string, extraCtype *vector.StringVector) (gotype string, ok
 	}
 	return ctype, false
 }
-
