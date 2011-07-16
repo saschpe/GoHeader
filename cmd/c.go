@@ -215,6 +215,7 @@ func (self *translate) C(file *os.File) os.Error {
 			}
 		} else {
 			if sub := reEnumEnd.FindStringSubmatch(line); sub != nil {
+				self.raw.WriteString("\n")
 				isEnum = false
 				continue
 			}
