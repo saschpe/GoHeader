@@ -7,8 +7,7 @@ Go file containing equivalent definitions.
 
 ## Installation
 
-	$ git clone git://github.com/kless/goheader.git
-	$ cd goheader && ./Install.sh && cd -
+	$ goinstall github.com/kless/goheader/goheader
 
 
 ## Configuration

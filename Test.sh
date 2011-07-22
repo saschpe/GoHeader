@@ -17,7 +17,7 @@ enum_test
     for targ in $TARGS
     do
         name=$(echo $targ | sed 's/\//_/' | sed 's/\-/_/' | sed 's/\-/_/' | sed 's/\-/_/' | tr -d .)
-        echo "it_passes_$name() { regress/run.sh regress/$name.h regress/$name.go; }"
+        echo "it_passes_$name() { test/run.sh test/$name.h test/$name.go; }"
     done
 } > all-test.sh
 
