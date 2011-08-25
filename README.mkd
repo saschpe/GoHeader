@@ -7,7 +7,7 @@ Go file containing equivalent definitions.
 
 ## Installation
 
-	$ goinstall github.com/kless/goheader
+	goinstall github.com/kless/goheader
 
 
 ## Configuration
@@ -17,7 +17,7 @@ Nothing.
 
 ## Operating instructions
 
-	$ goheader --help
+	goheader --help
 
 
 ## Copyright and licensing
