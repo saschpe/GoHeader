@@ -122,4 +122,3 @@ func main() {
 
 	os.Exit(exitCode)
 }
-

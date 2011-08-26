@@ -59,4 +59,3 @@ func walkDir(path string) {
 	close(v)                  // Terminate error handler loop.
 	<-done                    // Wait for all errors to be reported.
 }
-

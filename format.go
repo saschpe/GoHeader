@@ -94,4 +94,3 @@ func (self *translate) write() os.Error {
 
 	return nil
 }
-
