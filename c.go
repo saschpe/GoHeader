@@ -24,7 +24,8 @@ const COMMENT_LINE = "//!!! "
 const NoLastEnumValue = -1000
 
 var goBase = `// {cmd}
-// MACHINE GENERATED.
+// MACHINE GENERATED; DO NOT EDIT
+// ===
 
 package {pkg}
 
