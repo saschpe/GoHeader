@@ -72,7 +72,7 @@ func processFile(filename string) os.Error {
 // ===
 
 func main() {
-	validSystems := []string{"darwin", "freebsd", "linux", "windows"}
+	validSystems := []string{"linux", "freebsd", "openbsd", "darwin", "plan9"}
 	var isSystem bool
 
 	// === Parse the flags
