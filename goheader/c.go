@@ -18,7 +18,6 @@ import (
 	"strings"
 )
 
-
 const COMMENT_LINE = "//!!! "
 const NoLastEnumValue = -1000
 
@@ -55,7 +54,6 @@ var (
 	reMiddleMultipleComment = regexp.MustCompile(`^[ \t*]*(.+)`)
 	reEndMultipleComment    = regexp.MustCompile(`^(.+)?\*/`)
 )
-
 
 // Translates C type declaration into Go type declaration.
 //

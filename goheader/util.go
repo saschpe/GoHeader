@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 )
 
-
 func isHeader(f *os.FileInfo) bool {
 	return f.IsRegular() && !strings.HasPrefix(f.Name, ".") &&
 		strings.HasSuffix(f.Name, ".h")
@@ -24,38 +23,40 @@ func isHeader(f *os.FileInfo) bool {
 //
 // === Walk into a directory
 
-type fileVisitor chan os.Error
-
-func (v fileVisitor) VisitDir(path string, f *os.FileInfo) bool {
-	return true
-}
-
-func (v fileVisitor) VisitFile(path string, f *os.FileInfo) {
-	if isHeader(f) {
-		v <- nil // Synchronize error handler.
-		if err := processFile(path); err != nil {
-			v <- err
-		}
-	}
-}
-
-
 func walkDir(path string) {
-	// === Start an error handler
-	v := make(fileVisitor)
+	errors := make(chan os.Error)
 	done := make(chan bool)
 
+	// Error handler
 	go func() {
-		for err := range v {
+		for err := range errors {
 			if err != nil {
 				reportError(err)
 			}
 		}
 		done <- true
 	}()
-	// * * *
 
-	filepath.Walk(path, v, v) // Walk the tree.
-	close(v)                  // Terminate error handler loop.
-	<-done                    // Wait for all errors to be reported.
+	filepath.Walk(path, walkFn(errors)) // Walk the tree.
+	close(errors)                       // Terminate error handler loop.
+	<-done                              // Wait for all errors to be reported.
+}
+
+// Implements "filepath.WalkFunc".
+func walkFn(errors chan os.Error) filepath.WalkFunc {
+	return func(path string, info *os.FileInfo, err os.Error) os.Error {
+		if err != nil {
+			errors <- err
+			return nil
+		}
+
+		if isHeader(info) {
+			if err := processFile(path); err != nil {
+				errors <- err
+			}
+			return nil
+		}
+
+		return nil
+	}
 }

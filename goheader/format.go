@@ -28,7 +28,6 @@ const (
 	TAB_WIDTH    = 8
 )
 
-
 // Formats the Go source code.
 func (self *translate) format() os.Error {
 	fset := token.NewFileSet()

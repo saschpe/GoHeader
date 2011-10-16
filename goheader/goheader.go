@@ -17,14 +17,12 @@ import (
 	"strings"
 )
 
-
 // Represents the header file to translate. It has the Go output in both raw and
 // formatted code.
 type translate struct {
 	filename string        // The header file
 	raw, fmt *bytes.Buffer // The Go output
 }
-
 
 // Flags
 var (
@@ -41,7 +39,6 @@ func usage() {
 	flag.PrintDefaults()
 	os.Exit(2)
 }
-
 
 func processFile(filename string) os.Error {
 	file, err := os.OpenFile(filename, os.O_RDONLY, 0)

@@ -16,7 +16,6 @@ import (
 
 var exitCode = 0
 
-
 func reportError(err os.Error) {
 	fmt.Fprintf(os.Stderr, err.String())
 	exitCode = 2
