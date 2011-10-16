@@ -1,6 +1,6 @@
 ###### Notice
 
-*This file documents the changes in ***goheader*** versions that are
+*This file documents the changes in ***GoHeader*** versions that are
 listed below.*
 
 *Items should be added to this file as:*

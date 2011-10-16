@@ -1,4 +1,4 @@
-// Copyright 2010  The "goheader" Authors
+// Copyright 2010  The "GoHeader" Authors
 //
 // Use of this source code is governed by the BSD-2 Clause license
 // that can be found in the LICENSE file.
@@ -68,8 +68,8 @@ func processFile(filename string) os.Error {
 	return nil
 }
 
+//
 // === Main
-// ===
 
 func main() {
 	validSystems := []string{"linux", "freebsd", "openbsd", "darwin", "plan9"}
