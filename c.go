@@ -11,7 +11,6 @@ package main
 
 import (
 	"bufio"
-	"container/vector"
 	"fmt"
 	"regexp"
 	"os"
@@ -66,7 +65,7 @@ var (
 func (self *translate) C(file *os.File) os.Error {
 	var isMultipleComment, isTypeBlock, isConstBlock, isStruct, isEnum bool
 	lastEnumValue := -1
-	extraTypedef := new(vector.StringVector) // Types defined in the header file.
+	extraTypedef := make([]string, 0, 0) // Types defined in the header file.
 
 	self.raw.WriteString(goBase)
 
@@ -124,7 +123,7 @@ func (self *translate) C(file *os.File) os.Error {
 		// === Translate type definitions.
 		if sub := reTypedef.FindStringSubmatch(line); sub != nil {
 			// Add the new type.
-			extraTypedef.Push(sub[3])
+			extraTypedef = append(extraTypedef, sub[3])
 
 			gotype, ok := ctypeTogo(sub[2], extraTypedef)
 			line = fmt.Sprintf("%s %s", sub[3], gotype)
@@ -304,8 +303,8 @@ func (self *translate) C(file *os.File) os.Error {
 
 // Translates a C type definition into Go definition. The C header could have
 // defined new types so they're checked in the firs place.
-func ctypeTogo(ctype string, extraCtype *vector.StringVector) (gotype string, ok bool) {
-	for _, v := range *extraCtype {
+func ctypeTogo(ctype string, extraCtype []string) (gotype string, ok bool) {
+	for _, v := range extraCtype {
 		if v == ctype {
 			return ctype, true
 		}
